@@ -90,7 +90,32 @@ class HuffmanCoding {
   private static List<HuffmanTree> buildHuffmanTrees(List<String> preDefinedDictionary,
       List<LZ77Token> compressedData) {
     // kods
-    return new ArrayList<>();
+
+    Map<String, Integer> frequency = new HashMap<>();
+    for (LZ77Token token : compressedData) {
+      String tokenValue = token.getValue();
+      if (frequency.containsKey(tokenValue)) {
+        frequency.put(tokenValue, frequency.get(tokenValue) + 1);
+      }
+      
+      else {
+        frequency.put(tokenValue, 1);
+      }
+    }
+
+    PriorityQueue<HuffmanTree> trees = new PriorityQueue<>();
+    for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
+      trees.offer(new HuffmanLeaf(entry.getValue(), entry.getKey()));
+    }
+
+    while (trees.size() > 1) {
+      HuffmanTree a = trees.poll();
+      HuffmanTree b = trees.poll();
+
+      trees.offer(new HuffmanNode(a, b));
+    }
+
+    return new ArrayList<>(Collections.singletonList(trees.poll()));
   }
 
   /*
@@ -98,7 +123,21 @@ class HuffmanCoding {
    */
   private static String encodeSymbols(List<LZ77Token> compressedData, List<HuffmanTree> huffmanTrees) {
     // kods
-    return "";
+
+    if (huffmanTrees.isEmpty() || huffmanTrees.get(0) == null) {
+      return "";
+    }
+
+    Map<String, String> huffmanCodes = new HashMap<>();
+    makeCodes(huffmanTrees.get(0), "", huffmanCodes);
+
+    StringBuilder encodedString = new StringBuilder();
+    for (LZ77Token token : compressedData) {
+      String tokenValue = token.getValue();
+      encodedString.append(huffmanCodes.get(tokenValue));
+    }
+
+    return encodedString.toString();
   }
 }
 
@@ -157,9 +196,17 @@ class LZ77Token {
    * sekojošais simbols. Klases LZ77 objekti vēlāk tiks izmantoti LZ77Compression
    * klasē, lai saspiestu ievades tekstu.
    */
+  private String value;
+  public LZ77Token(String value) {
+      this.value = value;
+  }
+
+  public String getValue() {
+      return value;
+  }
 }
 
-class HuffmanTree {
+abstract class HuffmanTree implements Comparable<HuffmanTree> {
   //Struktūra priekš HuffmanCoding klases metodēm.
   /*
    * Klase HuffmanTree būs mezgls (node) Hafmana kokā (tree), ko izmantos Hafmena
@@ -167,4 +214,35 @@ class HuffmanTree {
    * Vienkāršāk sakot, tā ir struktūra, kas palīdzēs saprast, kā saspiestajos
    * datos iekodēt katru rakstzīmi.
    */
+
+   public final int frequency;
+
+   public HuffmanTree(int freq) {
+    frequency = freq;
+   }
+
+   @Override
+   public int compareTo(HuffmanTree tree) {
+    return frequency - tree.frequency;
+   }
+
+}
+
+class HuffmanLeaf extends HuffmanTree {
+  public final String value;
+
+  public HuffmanLeaf(int freq, String val) {
+    super(freq);
+    value = val;
+  }
+}
+
+class HuffmanNode extends HuffmanTree {
+  public final HuffmanTree left, right;
+
+  public HuffmanNode(HuffmanTree l, HuffmanTree r) {
+    super(l.frequency + r.frequency);
+    left = l;
+    right = r;
+  }
 }
